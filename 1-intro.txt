@@ -1,0 +1,81 @@
+# Borrar todas las reglas del cortafuegos
+    iptables -F
+
+# Borrar reglas de nat
+    iptables -t nat -F
+
+# Reiniciar contadores
+    iptables -Z
+    iptables -t nat -Z
+
+# Ver las reglas (ver las cadenas/chain)
+    (hay 3 input, output y Forward)
+    iptables -S                     -> (Solo si DROP o ACCEPT, y el orden en el que se introducen las reglas)
+    iptables -L                     -> (pocas columnas)
+    iptables -L -nv                 -> (Con mas columnas)
+    iptables -L -nv --line-numbers  -> (Le da una referencia numerica a las reglas para poder hacer algo con ellas)
+
+# Denegar las politicas de las cadenas con:
+    iptables -P INPUT DROP      (Nos quedamos sin internet)
+    iptables -P OUTPUT DROP
+    iptables -P FORWARD DROP
+
+# Aceptar las politicas de las cadenas:
+    iptables -P INPUT ACCEPT
+
+# Ver que puertos estan abiertos:
+    ss -ltuna
+
+# Cadena 
+    Es input, output o forward.
+ 
+
+# Agregar reglas 
+    (-A es append para insertarlas al final, y -I para insertarla al final)
+    -A [cadena]
+    [-p protocolo]
+    [-s ip de origen]
+    [-d ip de destino]
+    [-i interfaz de entrada]
+    [-o interfaz de salida]
+    [-j si queremos que los paquetes en esta regla sean ACCEPT/DROP aceptados o denegados]
+
+    # Ejemplo: Aceptar todos los paquetes de salida
+                iptables -A OUTPUT -j ACCEPT
+                Ver como quedo la cadena de salida:
+                Chain OUTPUT (policy ACCEPT 0 packets, 0 bytes)
+                num   pkts bytes target     prot opt in     out     source               destination         
+                1       19  1157 ACCEPT     all  --  *      *       0.0.0.0/0            0.0.0.0/0  
+
+    # Borro la primer regla de la cadena output:
+        iptables -D OUTPUT 1
+
+    # Ejemplo2: Niego la salida a internet (ni un ping podemos hacer)
+        iptables -A OUTPUT -j DROP
+        ping -c 4 8.8.8.8
+        PING 8.8.8.8 (8.8.8.8) 56(84) bytes of data.
+        ping: sendmsg: Operación no permitida
+        ping: sendmsg: Operación no permitida
+        ping: sendmsg: Operación no permitida
+        ping: sendmsg: Operación no permitida
+
+# Aceptar entrada y salida en una interfaz dada y protocolo:
+    #Como saber mi interfaz:
+        ip ad
+    # entrada:
+        sudo iptables -A INPUT -i enp4s0 -p icmp -j ACCEPT
+    # Salida:
+        sudo iptables -A OUTPUT -o enp4s0 -p icmp -j ACCEPT
+
+
+# Si en las reglas, la primera lo niega, las demas que se agreguen al final (append)
+    No van a salir:
+    Chain OUTPUT (policy ACCEPT 0 packets, 0 bytes)
+    num   pkts bytes target     prot opt in     out     source               destination         
+    1     8096   26M DROP       all  --  *      *       0.0.0.0/0            0.0.0.0/0           
+    2        0     0 ACCEPT     icmp --  *      enp4s0  0.0.0.0/0            0.0.0.0/0           
+    3        0     0 ACCEPT     all  --  *      *       0.0.0.0/0            0.0.0.0/0           
+    4        0     0 ACCEPT     all  --  *      *       0.0.0.0/0            0.0.0.0/0           
+    5        0     0 ACCEPT     icmp --  *      enp4s0  0.0.0.0/0            0.0.0.0/0           
+    6        0     0 ACCEPT     tcp  --  *      enp4s0  0.0.0.0/0            0.0.0.0/0  
+
